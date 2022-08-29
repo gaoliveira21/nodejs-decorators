@@ -11,15 +11,26 @@ function route(target, { kind }) {
   }
 }
 
+const isUiDisabled = process.env.UI_DISABLED
+let ui
+if(isUiDisabled) {
+  ui = {}
+} else {
+  const Ui = require('./ui')
+  ui = new Ui()
+}
+
 const log = (...args) => {
-  console.log(args)
+  if(isUiDisabled) {
+    console.log(args)
+  }
 }
 
 function responseTimeTracker(target, { kind, name }) {
   if (kind !== 'method') return target
-  const reqId = randomUUID()
-
+  
   return function (request, response) {
+    const reqId = randomUUID()
     const requestStartedAt = performance.now()
     const afterExecution = target.apply(this, [request, response])
     const data = { 
@@ -50,6 +61,8 @@ function onRequestEnded({ data, response, requestStartedAt }) {
     data.statusMessage = response.statusMessage
     data.elapsed = timeDiff.toFixed(2).concat('ms')
     log('benchmark', data)
+
+    ui.updateGraph(data.method, seconds)
   }
 }
 
